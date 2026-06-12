@@ -3,13 +3,13 @@
 //
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
-//  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
+//  File name            : axi_lite_item.svh
+//  Last modified+updates: 12/06/2026 (BTS)
 //
-//  Project              : ahb - Disertatie
+//  Project              : axi_lite_to_ahb_Bridge - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
+//  Description          : This file defines the axi_lite transaction item,
 //                         encapsulating all fields required for read/write operations.
 //  ======================================================================================================
 
@@ -34,6 +34,7 @@ class axi_lite_item extends uvm_sequence_item;
   bit      [4-1  :0]    id;
 
   rand bit              row;
+  bit                   row_mon;
 
   rand bit [9:0]        trans_delay;
 
@@ -54,11 +55,12 @@ class axi_lite_item extends uvm_sequence_item;
   rand hsk_type         addr_hsk_type;
   rand hsk_type         data_hsk_type;
   rand hsk_type         resp_hsk_type;
+  int unsigned          internal_id;
 
 
   constraint c_addr_size{
-    awaddr%8 == 0;
-    araddr%8 == 0;
+    soft awaddr%8 == 0;
+    soft araddr%8 == 0;
   };
 
 //Constraint for transaction delay
@@ -114,10 +116,11 @@ class axi_lite_item extends uvm_sequence_item;
   //Data channel
     `uvm_field_int (wdata, UVM_DEFAULT)
     `uvm_field_int (rdata, UVM_DEFAULT)
-
     `uvm_field_int (bresp, UVM_DEFAULT)
     `uvm_field_int (rresp, UVM_DEFAULT)
     `uvm_field_int (row, UVM_DEFAULT)
+    `uvm_field_int (row_mon, UVM_DEFAULT)
+    `uvm_field_int(internal_id,UVM_ALL_ON)
   //Delay
     `uvm_field_enum (delay_type, trans_delay_type, UVM_DEFAULT)
     `uvm_field_int  (trans_delay, UVM_DEFAULT)

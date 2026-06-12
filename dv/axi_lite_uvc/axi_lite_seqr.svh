@@ -3,14 +3,14 @@
 //
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
-//  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
+//  File name            : axi_lite_seqr.svh
+//  Last modified+updates: 12/06/2026 (BTS)
 //
-//  Project              : ahb - Disertatie
+//  Project              : axi_lite_to_ahb - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
-//                         encapsulating all fields required for read/write operations.
+//  Description          : This file defines the axi_lite sequencer,
+//                        responsible for generating and sequencing axi_lite_item transactions, interfacing with the driver through analysis ports.
 //  ======================================================================================================
 
 class axi_lite_sequencer extends uvm_sequencer#(axi_lite_item);

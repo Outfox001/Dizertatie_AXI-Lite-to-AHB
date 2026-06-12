@@ -3,14 +3,13 @@
 //
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
-//  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
+//  File name            : bridge_proj_config.svh
+//  Last modified+updates: 12/06/2026 (BTS)
 //
-//  Project              : ahb - Disertatie
+//  Project              : axi_to_ahb_bridge - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
-//                         encapsulating all fields required for read/write operations.
+//  Description          : This file defines the bridge_proj_config class, which contains the configuration for the AHB to AXI bridge testbench.
 //  ======================================================================================================
 
 class bridge_proj_config extends uvm_object;
@@ -39,15 +38,15 @@ class bridge_proj_config extends uvm_object;
     m_ahb_cfg = new("m_ahb_cfg");
 
     if(is_active == UVM_ACTIVE) begin
-      //AXI4 Write
+      //AXI_Lite Write
       m_axi_cfg.is_active  = UVM_ACTIVE;
       m_axi_cfg.agent_type = axi_lite_pkg::MASTER;
-      //AXI4 Read
+      //AXI_Lite Read
       m_ahb_cfg.is_active  = UVM_ACTIVE;
       m_ahb_cfg.agent_type = ahb_pkg::MASTER;
     end
     else begin
-      m_axi_cfg.is_active    = UVM_PASSIVE;
+      m_axi_cfg.is_active = UVM_PASSIVE;
       m_ahb_cfg.is_active = UVM_PASSIVE;
     end
   endfunction : build

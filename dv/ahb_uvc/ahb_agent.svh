@@ -3,16 +3,14 @@
 //
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
-//  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
-//
-//  Project              : ahb - Disertatie
+//  File name            : ahb_agent.svh
+//  Last modified+updates: 12/06/2026 (BTS)
+//  Project              : axi_to_ahb_bridge - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
-//                         encapsulating all fields required for read/write operations.
+//  Description          : This file defines the ahb agent class, which is responsible for generating and monitoring AHB transactions,
+//                         and connecting the driver and monitor components.
 //  ======================================================================================================
-
 
 class ahb_agent extends uvm_agent;
    `uvm_component_utils(ahb_agent)

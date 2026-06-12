@@ -4,96 +4,108 @@
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
 //  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
+//  Last modified+updates: 12/06/2026 (BTS)
 //
-//  Project              : ahb - Disertatie
+//  Project              : axi_to_ahb_bridge - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
-//                         encapsulating all fields required for read/write operations.
+//  Description          : This file defines the ahb monitor class, which is responsible for collecting coverage data for AHB transactions,
+//                         and connecting the driver and monitor components.
 //  ======================================================================================================
 
 class ahb_monitor extends uvm_monitor;
-  // Register the monitor with the UVM factory
+
   `uvm_component_utils(ahb_monitor)
 
-  // Virtual interface to connect to the DUT
-  virtual ahb_if vif;
-  ahb_item ahb_item_s;
+  virtual ahb_tb_if vif;
+  ahb_memory mem;
+  ahb_item item;
 
-  // Analysis port to send transactions to subscribers (e.g., scoreboard)
   uvm_analysis_port #(ahb_item) analysis_port;
 
-  // Constructor
   function new(string name, uvm_component parent);
     super.new(name, parent);
   endfunction
 
-  // Build phase: retrieve interface and create analysis port
   virtual function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-    if (!uvm_config_db#(virtual ahb_if)::get(this, "", "vif", vif)) begin
-      `uvm_fatal(get_type_name(), "No handle received for ahb_if");
+    if (!uvm_config_db#(virtual ahb_tb_if)::get(this, "", "vif", vif)) begin
+      `uvm_fatal(get_type_name(), "No handle received for ahb_tb_if")
+    end
+    if (!uvm_config_db#(ahb_memory)::get(this, "", "mem", mem)) begin
+      `uvm_fatal(get_type_name(), "No ahb_memory handle received")
     end
     analysis_port = new("analysis_port", this);
-    // Get the virtual interface from the config DB
-    ahb_item_s  = ahb_item::type_id::create("ahb_item_s", this);
-  endfunction
-  // Helper function to determine burst length based on HBURST value
-  function int get_burst_length(ahb_burst_e hburst);
-    case (hburst)
-      SINGLE:         return 1;
-      INCR4, WRAP4:   return 4;
-      INCR8, WRAP8:   return 8;
-      INCR16, WRAP16: return 16;
-      INCR:           return 4;  // Default INCR treated as 4-beat burst
-      default:        return 1;
-    endcase
+    item = ahb_item::type_id::create("item", this);
   endfunction
 
-  // Run phase: monitor AHB transactions and send them via analysis port
+
   virtual task run_phase(uvm_phase phase);
-    // ahb_item             ahb_item_s;
-    int                  burst_len ;
-    bit [ADDR_WIDTH-1:0] addr      ;
+    bit [31:0] prev_addr;
+    bit        prev_write;
+    bit [2:0]  prev_hsize;
+    bit [1:0]  prev_htrans;
+    bit        first_beat;
 
+    first_beat = 1'b1;
+    item.hready = vif.cb_mon.hready;
     forever begin
-      // Wait for a valid NONSEQ transaction and HREADY signal
-      @(vif.cb_mon iff ((vif.cb_mon.htrans == NONSEQ && vif.cb_mon.hready) || !vif.reset));
-
-      // Capture control signals from the interface
-      ahb_item_s.haddr        = vif.cb_mon.haddr;
-      ahb_item_s.hwrite       = vif.cb_mon.hwrite;
-      ahb_item_s.htrans       = vif.cb_mon.htrans;
-      // ahb_item_s.hburst       = vif.cb_mon.hburst;
-      ahb_item_s.hsize        = vif.cb_mon.hsize;
-
-      // Determine burst length and initialize address
-      burst_len               = get_burst_length(ahb_burst_e'(vif.cb_mon.hburst));
-      addr                    = vif.cb_mon.haddr;
-
-      // Allocate memory for data arrays based on burst length
-      ahb_item_s.hrdata_array = new[burst_len];
-
-      // Loop through each beat in the burst
-      for (int i = 0; i < burst_len; i++) begin
-        // Wait for HREADY before capturing data
-        @(vif.cb_mon iff (vif.cb_mon.hready));
-
-        if (vif.cb_mon.hwrite) begin
-          // Capture write data
-          // `uvm_info("Monitor", $sformatf("WRITE[%0d]: addr=%h data=%h", i, addr, vif.cb_mon.hwdata), UVM_LOW)
-        end else begin
-          // Capture read data
-          ahb_item_s.hrdata_array[i] = vif.cb_mon.hrdata;
-          // `uvm_info("Monitor", $sformatf("READ[%0d]: addr=%h data=%h", i, addr, vif.cb_mon.hrdata), UVM_LOW)
+      @(vif.cb_mon iff (vif.cb_mon.hready &&vif.cb_mon.htrans inside {NONSEQ, SEQ}));
+        if (first_beat) begin
+          // ------------------------------------------------------------
+          // First valid AHB address phase
+          // ------------------------------------------------------------
+          prev_addr   = vif.cb_mon.haddr;
+          prev_write  = vif.cb_mon.hwrite;
+          prev_hsize  = vif.cb_mon.hsize;
+          prev_htrans = vif.cb_mon.htrans;
+          first_beat  = 1'b0;
+          `uvm_info(get_type_name(),$sformatf("AHB MON FIRST ADDR: addr=0x%0h write=%0b trans=%0d",prev_addr,prev_write,prev_htrans),UVM_LOW)
+          // If first transfer is read, prepare data for driver
+          if (!vif.cb_mon.hwrite) begin
+            mem.prepare_read(vif.cb_mon.haddr);
+          end
         end
-        ahb_item_s.haddr = vif.cb_mon.haddr;
-      end
+        else begin
+          // ------------------------------------------------------------
+          // Complete previous transfer using current data phase signals
+          // ------------------------------------------------------------
+          item = ahb_item::type_id::create("item", this);
+          item.haddr  = prev_addr;
+          item.hwrite = prev_write;
+          item.hsize  = prev_hsize;
+          item.htrans = ahb_trans_e'(prev_htrans);
+          item.hresp  = vif.cb_mon.hresp;
+          // item.hready = vif.cb_mon.hready;
+          if (prev_write) begin
+            item.hwdata = vif.cb_mon.hwdata;
+            // Store write data into memory model
+            mem.store(item.haddr, item.hwdata);
+            `uvm_info(get_type_name(),$sformatf("AHB MON WRITE COMPLETE: addr=0x%0h data=0x%0h trans=%0d",item.haddr,item.hwdata,item.htrans),UVM_LOW)
+            `uvm_info(get_type_name(),$sformatf("AHB MON item%s",item.sprint()),UVM_LOW)
+          end
+          else begin
+            item.hrdata = vif.cb_mon.hrdata;
+            `uvm_info(get_type_name(),$sformatf("AHB MON READ COMPLETE: addr=0x%0h data=0x%0h trans=%0d",item.haddr,item.hrdata,item.htrans),UVM_LOW)
+            `uvm_info(get_type_name(),$sformatf("AHB MON item%s",item.sprint()),UVM_LOW)
+          end
+          analysis_port.write(item);
+          // ------------------------------------------------------------
+          // Capture current address phase for next transfer
+          // ------------------------------------------------------------
+          prev_addr   = vif.cb_mon.haddr;
+          prev_write  = vif.cb_mon.hwrite;
+          prev_hsize  = vif.cb_mon.hsize;
+          prev_htrans = vif.cb_mon.htrans;
+          `uvm_info(get_type_name(),$sformatf("AHB MON NEXT ADDR: addr=0x%0h write=%0b trans=%0d",prev_addr,prev_write,prev_htrans),UVM_LOW)
+          // If current transfer is read, prepare read data for AHB driver
+          if (!vif.cb_mon.hwrite) begin
+            mem.prepare_read(vif.cb_mon.haddr);
+          end
+        end
 
-      // Send the captured transaction to the analysis port
-      analysis_port.write(ahb_item_s);
-      // `uvm_info("Monitor", $sformatf("Captured transaction:\n%s", ahb_item_s.sprint()), UVM_LOW)
     end
   endtask
+
 endclass : ahb_monitor
+

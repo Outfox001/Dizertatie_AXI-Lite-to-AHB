@@ -3,13 +3,13 @@
 //
 //  Designer             : Balga Teodora-Stefania (BTS)
 //  Date                 : 02/03/2026
-//  File name            : ahb_item.svh
-//  Last modified+updates: 02/03/2026 (BTS) - Initial Version
+//  File name            : axi_lite_agent.svh
+//  Last modified+updates: 12/06/2026 (BTS)
 //
-//  Project              : ahb - Disertatie
+//  Project              : axi_lite_to_ahb - Disertatie
 //
 //  ------------------------------------------------------------------------------------------------------
-//  Description          : This file defines the ahb transaction item,
+//  Description          : This file defines the axi_lite agent class, which is a UVM component responsible for generating and driving AXI Lite transactions,
 //                         encapsulating all fields required for read/write operations.
 //  ======================================================================================================
 
